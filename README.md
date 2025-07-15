@@ -1,18 +1,18 @@
 # LLM_from_scratch
 
-llm-from-scratch/
-│
-├── README.md                        <- Project overview, roadmap, diagrams
-├── data/                            <- Preprocessing scripts & raw datasets
-├── tokenizer/                       <- BPE & tokenizer code
-├── model/                           <- Attention, transformer, GPT, kv-cache
-├── training/                        <- Loss, optimizer, precision training
-├── finetune/                        <- SFT, LoRA, PPO, DPO
-├── inference/                       <- Generation, kv-cache, quantization
-├── deployment/                      <- API, Streamlit app, quantized model
-├── scripts/                         <- Train / test / evaluate scripts
-├── tests/                           <- Unit tests for core modules
-└── notebooks/                       <- Exploratory + visualizations (Colab-ready)
+| Path              | Description                                             |
+|-------------------|---------------------------------------------------------|
+| `README.md`       | Project overview, roadmap, diagrams                     |
+| `data/`           | Preprocessing scripts & raw datasets                    |
+| `tokenizer/`      | BPE & tokenizer code                                    |
+| `model/`          | Attention, transformer, GPT, kv-cache                   |
+| `training/`       | Loss, optimizer, precision training                     |
+| `finetune/`       | SFT, LoRA, PPO, DPO                                     |
+| `inference/`      | Generation, kv-cache, quantization                      |
+| `deployment/`     | API, Streamlit app, quantized model                     |
+| `scripts/`        | Train / test / evaluate scripts                         |
+| `tests/`          | Unit tests for core modules                             |
+| `notebooks/`      | Exploratory + visualizations (Colab-ready)             |
 
 
 
