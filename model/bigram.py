@@ -7,13 +7,14 @@ import torch.optim as optim
 batch_size=32
 block_size=8 # context windows
 learning_rate=1e-3
-n_epoch=10000
+n_epoch=2000
 device='cuda' if torch.cuda.is_available() else 'cpu'
 eval_iter=10
 vocab_size=65
 n_embd=32
-head_size=16
-
+# attention
+head_size=8
+n_heads=4
 
 
 
@@ -84,7 +85,25 @@ class Head(nn.Module):
 
         return out
 
-        
+class MultiHeadAttention(nn.Module):
+    def __init__(self,head_size):
+        super().__init__()
+        self.heads=nn.ModuleList([Head(head_size) for _ in range(n_heads)])
+
+    def forward(self,x):
+        return torch.concat([ h(x) for h in self.heads],dim=-1)
+
+
+class FeedForward(nn.Module):
+    def __init__(self,n_embed):
+        super().__init__()
+        self.net=nn.Sequential(
+            nn.Linear(n_embed,n_embed),
+            nn.ReLU()
+        )
+
+    def forward(self,x):
+        return self.net(x)    
 
 # Bigram model
 class BigramModel(nn.Module):
@@ -93,16 +112,18 @@ class BigramModel(nn.Module):
         
         self.token_embed=nn.Embedding(vocab_size,n_embd)
         self.pos=nn.Embedding(block_size,n_embd)
-        self.head=Head(head_size=head_size)
-        self.lm_head=nn.Linear(head_size,vocab_size)
+        self.mha=MultiHeadAttention(n_embd//n_heads)
+        self.ffn=FeedForward(n_embd)
+        self.lm_head=nn.Linear(n_embd,vocab_size)
 
     def forward(self,input,target=None):
         B,T=input.shape
         embedding=self.token_embed(input) # B,T ---> B,T,n_embd
         pos_embd=self.pos(torch.arange(T))#B,T,n_embd
         input=embedding+pos_embd # encoded the position (B,T,n_embd) 
-        h=self.head(input) #B,T,Head_size
-        logits=self.lm_head(h)
+        att=self.mha(input) #B,T,n_embd (communication between token)
+        x=self.ffn(att) # B,T,n_embd (self representation of each token indpe)
+        logits=self.lm_head(x)
 
         B,T,C=logits.shape
         if target!=None:
