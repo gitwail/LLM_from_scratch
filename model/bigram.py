@@ -15,7 +15,7 @@ n_embd=32
 # attention
 head_size=8
 n_heads=4
-
+n_block=4
 
 
 # seed 
@@ -89,21 +89,40 @@ class MultiHeadAttention(nn.Module):
     def __init__(self,head_size):
         super().__init__()
         self.heads=nn.ModuleList([Head(head_size) for _ in range(n_heads)])
+        self.proj=nn.Linear(n_embd,n_embd)
 
     def forward(self,x):
-        return torch.concat([ h(x) for h in self.heads],dim=-1)
+        x=torch.concat([ h(x) for h in self.heads],dim=-1)
+        x=self.proj(x)
+        return x 
+    
+    
 
 
 class FeedForward(nn.Module):
     def __init__(self,n_embed):
         super().__init__()
         self.net=nn.Sequential(
-            nn.Linear(n_embed,n_embed),
-            nn.ReLU()
+            nn.Linear(n_embed,4*n_embed),
+            nn.ReLU(),
+            nn.Linear(4*n_embed,n_embd)
         )
 
     def forward(self,x):
         return self.net(x)    
+
+
+class Block(nn.Module):
+    def __init__(self,n_embd,head_size):
+        super().__init__()
+        self.mha=MultiHeadAttention(head_size)  
+        self.ffn=FeedForward(n_embd)  
+
+    def forward(self,x):
+        x=self.mha(x)+x
+        x=self.ffn(x)+x
+        return x 
+
 
 # Bigram model
 class BigramModel(nn.Module):
@@ -112,8 +131,11 @@ class BigramModel(nn.Module):
         
         self.token_embed=nn.Embedding(vocab_size,n_embd)
         self.pos=nn.Embedding(block_size,n_embd)
-        self.mha=MultiHeadAttention(n_embd//n_heads)
-        self.ffn=FeedForward(n_embd)
+
+        # self.mha=MultiHeadAttention(n_embd//n_heads)
+        # self.ffn=FeedForward(n_embd)
+        self.blocks=nn.ModuleList([Block(n_embd,n_embd//n_heads) for _ in range(n_block)])
+
         self.lm_head=nn.Linear(n_embd,vocab_size)
 
     def forward(self,input,target=None):
@@ -121,9 +143,12 @@ class BigramModel(nn.Module):
         embedding=self.token_embed(input) # B,T ---> B,T,n_embd
         pos_embd=self.pos(torch.arange(T))#B,T,n_embd
         input=embedding+pos_embd # encoded the position (B,T,n_embd) 
-        att=self.mha(input) #B,T,n_embd (communication between token)
-        x=self.ffn(att) # B,T,n_embd (self representation of each token indpe)
-        logits=self.lm_head(x)
+        # att=self.mha(input) #B,T,n_embd (communication between token)
+        # x=self.ffn(att) # B,T,n_embd (self representation of each token indpe)
+        for b in self.blocks:
+            input=b(input)
+        # x=self.block(input)
+        logits=self.lm_head(input)
 
         B,T,C=logits.shape
         if target!=None:
